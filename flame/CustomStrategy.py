@@ -1,16 +1,11 @@
 import flwr as fl
 import numpy as np
-import json
 from functools import reduce
 from logging import WARNING
 from sklearn.neighbors import KernelDensity
-# from sklearn.neighbors import KernelDensity
 from typing import Callable, Dict, List, Optional, Tuple, Union
 from typing import Optional, Callable, Dict, Tuple, List, Union
 from flwr.common import (
-    EvaluateIns,
-    EvaluateRes,
-    FitIns,
     FitRes,
     MetricsAggregationFn,
     NDArrays,
@@ -20,7 +15,6 @@ from flwr.common import (
     parameters_to_ndarrays,
 )
 from flwr.common.logger import log
-from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
 
 WARNING_MIN_AVAILABLE_CLIENTS_TOO_LOW = """
@@ -30,7 +24,7 @@ connected to the server. `min_available_clients` must be set to a value larger
 than or equal to the values of `min_fit_clients` and `min_evaluate_clients`.
 """
 
-# 假设这是拆分后的权重和对应的形状信息
+
 best_weights = [
     np.random.rand(64, 1, 3),  # Shape: (64, 1, 3)
     np.random.rand(64),        # Shape: (64,)
@@ -40,10 +34,10 @@ best_weights = [
     np.random.rand(1),         # Shape: (1,)
 ]
 
-# 存储每个权重的形状信息
+
 weights_shapes = [w.shape for w in best_weights]
 
-# 还原的函数
+
 def restore_weights(packed_weights, shapes):
     restored_weights = []
     for weight, shape in zip(packed_weights, shapes):
@@ -105,29 +99,22 @@ class Dis(fl.server.strategy.FedAvg):
         ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
         """Aggregate fit results using weighted average and filter based on jsd_value."""
 
-        # 如果没有结果，则直接返回
         if not results:
             return None, {}
 
-        # 如果有失败客户端且不接受失败，直接返回
         if not self.accept_failures and failures:
             return None, {}
 
-        # 初始化用于聚合的结果和 jsd_value 列表
         weights_results = []
         jsd_values = []
 
-        # 提取每个客户端的模型参数、jsd_value 和最佳权重
         for client, fit_res in results:
-            # 确保从 metrics 中访问 jsd_value
             if 'current_jsd_value' in fit_res.metrics:
                 jsd_value = fit_res.metrics['current_jsd_value']
                 jsd_values.append(jsd_value)
                 
-                # 拆分 parameters
                 parameters = parameters_to_ndarrays(fit_res.parameters)
                 
-                # 假设我们将参数拆分为前半部分和后半部分
                 mid_point = len(parameters) // 2
                 local_parameters = parameters[:mid_point]
                 best_weights = parameters[mid_point:]
@@ -135,39 +122,29 @@ class Dis(fl.server.strategy.FedAvg):
                 local_parameters = restore_weights(local_parameters, weights_shapes)
                 best_weights = restore_weights(best_weights, weights_shapes)
 
-                # 将客户端的参数、对应的样本数和 jsd_value 保存
                 weights_results.append((local_parameters, best_weights, fit_res.num_examples, jsd_value))
             else:
                 log(WARNING, f"Client {client} did not return 'current_jsd_value'.")
 
-        # 计算所有客户端的 jsd_value 平均值
         average_jsd_value = sum(jsd_values) / len(jsd_values)
         print(f"Average JSD value: {average_jsd_value}")
 
-        # 初始化聚合列表
         results = []
 
-        # 根据 jsd_value 筛选出结果
         for (local_parameters, best_weights, num_examples, jsd_value) in weights_results:
             if jsd_value < average_jsd_value:
-                # 当 jsd_value 小于或等于平均值时，使用当前权重
                 results.append((local_parameters, num_examples))
             else:
-                # 当 jsd_value 大于等于平均值时，使用最佳权重
                 results.append((best_weights, num_examples))
 
-        # 如果没有符合条件的客户端，则返回 None
         if not results:
             return None, {}
 
-        # 聚合权重
         if self.inplace:
             aggregated_ndarrays = self.aggregate_inplace(results)
         else:
-            # aggregated_ndarrays = self.aggregate(results) 
-            aggregated_ndarrays = self.aggregate_flame_f(results) 
+            aggregated_ndarrays = self.aggregate_flame(results) 
 
-        # 转换聚合后的参数
         final_parameters = ndarrays_to_parameters(aggregated_ndarrays)
 
         metrics_aggregated = {}
@@ -204,32 +181,13 @@ class Dis(fl.server.strategy.FedAvg):
 
         return params
     
-    def aggregate(self, results: List[Tuple[NDArrays, int]]) -> NDArrays:
+
+    def aggregate_flame(self, results: List[Tuple[NDArrays, int]]) -> NDArrays:
         """Compute weighted average."""
         # Calculate the total number of examples used during training
         num_examples_total = sum(num_examples for (_, num_examples) in results)
 
-        # Create a list of weights, each multiplied by the related number of examples
-        weighted_weights = [
-            [layer * num_examples for layer in weights] for weights, num_examples in results
-        ]
-
-        # Compute average weights of each layer
-        weights_prime: NDArrays = [
-            reduce(np.add, layer_updates) / num_examples_total
-            for layer_updates in zip(*weighted_weights)
-        ]
-
-        return weights_prime
-
-
-    def aggregate_flame_f(self, results: List[Tuple[NDArrays, int]]) -> NDArrays:
-        """Compute weighted average."""
-        # Calculate the total number of examples used during training
-        num_examples_total = sum(num_examples for (_, num_examples) in results)
-        # 使用列表推导式来计算加权系数
         weight_scalling_factor_list = [num_examples / num_examples_total for (_, num_examples) in results]
-
 
         # get last feature layer
         w_last_layer = []
