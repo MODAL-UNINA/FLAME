@@ -308,7 +308,7 @@ EPOCHS = 1
 batch_size = 32
 device = 0
 server_IP = '127.0.0.1:8080'
-output_file = 'output_f_m_0.1_epoch_1'
+output_file = 'output_flame'
 # 'MSSQL', 'UDPLag', 'NetBIOS', 'NTP', 'Syn',
 # 'DNS', 'LDAP', 'Portmap', 'TFTP', 'SSDP', 'SNMP', 'UDP', 'WebDDoS'
 zero_day = 'MSSQL'
