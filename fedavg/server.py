@@ -86,5 +86,3 @@ def plot_loss_accuracy_server(history):
 
 
 plot_loss_accuracy_server(history)
-
-#%%
