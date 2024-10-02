@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 
-seed = 42
+seed = 0
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
@@ -123,19 +123,57 @@ individual_dfs = [pd.read_pickle(dsp) for dsp in tqdm(dspaths)]
 df = pd.concat(individual_dfs, axis=0, ignore_index=True)
 
 # Preprocessing
-df.isna().sum().sum()
-df['Flow Packets/s'] = df['Flow Packets/s'].fillna(df['Flow Packets/s'].mean())
-
 # remove the 'DrDoS_' from the labels
 df['Label'] = df['Label'].apply(lambda x: x.replace('DrDoS_', '') if 'DrDoS_' in x else x)
 # merge the labels of the 'UDPLag' and 'UDP-lag' attacks
 df['Label'] = df['Label'].apply(lambda x: 'UDPLag' if x == 'UDP-lag' else x)
 
-best_features = ['Down/Up Ratio', 'URG Flag Count', 'Bwd Packet Length Min', 'CWE Flag Count',
-                    'Avg Fwd Segment Size', 'Fwd Packet Length Mean', 'Min Packet Length',
-                    'Fwd Packet Length Min', 'Packet Length Mean', 'Bwd Packet Length Mean']
+# check duplicates
+df.duplicated().sum()
 
-df_best = df[best_features + ['Label']]
+# remove duplicates
+df = df.drop_duplicates()
+
+# remove NAN
+df.isna().sum().sum()
+df = df.dropna()
+
+# resort
+df = df.reset_index(drop=True) 
+
+# drop useless features
+df = df.drop(columns=['Flow ID', 'Protocol', 'Timestamp', 'Bwd PSH Flags', 
+                      'Fwd URG Flags', 'Bwd URG Flags', 'Fwd Avg Bytes/Bulk', 
+                      'Fwd Avg Packets/Bulk', 'Fwd Avg Bulk Rate', 
+                      'Bwd Avg Bytes/Bulk', 'Bwd Avg Packets/Bulk', 
+                      'Bwd Avg Bulk Rate', 'FIN Flag Count', 'PSH Flag Count', 'ECE Flag Count'])
+
+# keep useful features
+total_features = ['Flow Duration', 'Total Fwd Packets', 'Total Backward Packets',
+       'Total Length of Fwd Packets', 'Total Length of Bwd Packets',
+       'Fwd Packet Length Max', 'Fwd Packet Length Min',
+       'Fwd Packet Length Mean', 'Fwd Packet Length Std',
+       'Bwd Packet Length Max', 'Bwd Packet Length Min',
+       'Bwd Packet Length Mean', 'Bwd Packet Length Std', 'Flow Bytes/s',
+       'Flow Packets/s', 'Flow IAT Mean', 'Flow IAT Std', 'Flow IAT Max',
+       'Flow IAT Min', 'Fwd IAT Total', 'Fwd IAT Mean', 'Fwd IAT Std',
+       'Fwd IAT Max', 'Fwd IAT Min', 'Bwd IAT Total', 'Bwd IAT Mean',
+       'Bwd IAT Std', 'Bwd IAT Max', 'Bwd IAT Min', 'Fwd PSH Flags',
+       'Fwd Header Length', 'Bwd Header Length', 'Fwd Packets/s',
+       'Bwd Packets/s', 'Min Packet Length', 'Max Packet Length',
+       'Packet Length Mean', 'Packet Length Std', 'Packet Length Variance',
+       'SYN Flag Count', 'RST Flag Count', 'ACK Flag Count', 'URG Flag Count',
+       'CWE Flag Count', 'Down/Up Ratio', 'Average Packet Size',
+       'Avg Fwd Segment Size', 'Avg Bwd Segment Size', 'Fwd Header Length.1',
+       'Subflow Fwd Packets', 'Subflow Fwd Bytes', 'Subflow Bwd Packets',
+       'Subflow Bwd Bytes', 'Init_Win_bytes_forward',
+       'Init_Win_bytes_backward', 'act_data_pkt_fwd', 'min_seg_size_forward',
+       'Active Mean', 'Active Std', 'Active Max', 'Active Min', 'Idle Mean',
+       'Idle Std', 'Idle Max', 'Idle Min']
+
+df[total_features] = df[total_features].astype('float32') 
+
+df_best = df[total_features + ['Label']]
 
 # remove collinear features
 df_best_80 = remove_collinear_features(df_best.drop(columns=['Label']), 0.8)
@@ -144,54 +182,56 @@ df_best_80['Label'] = df_best['Label']
 df_best_80.drop(columns=['Label']).corr()
 
 
+df_best_80.isna().sum().sum()
+df_best_80 = df_best_80.dropna()  
+
+# resort
+df_best_80 = df_best_80.reset_index(drop=True)
+
 df_sampled_80 = df_best_80.copy()
-# check duplicates
-df_sampled_80.duplicated().sum()
-# remove duplicates
-df_sampled_80 = df_sampled_80.drop_duplicates()
 
 
-# plot the distribution of the features for each attack type
-# 'MSSQL', 'UDPLag', 'NetBIOS', 'NTP', 'Syn', 'DNS', 'LDAP', 'Portmap', 'TFTP', 'SSDP', 'SNMP', 'UDP', 'WebDDoS'
-data_begin = df_sampled_80[df_sampled_80['Label'] == 'Benign']
-data_mssql = df_sampled_80[df_sampled_80['Label'] == 'MSSQL']
-data_udplag = df_sampled_80[df_sampled_80['Label'] == 'UDPLag']
-data_netbios = df_sampled_80[df_sampled_80['Label'] == 'NetBIOS']
-data_ntp = df_sampled_80[df_sampled_80['Label'] == 'NTP']
-data_syn = df_sampled_80[df_sampled_80['Label'] == 'Syn']
-data_dns = df_sampled_80[df_sampled_80['Label'] == 'DNS']
-data_ldap = df_sampled_80[df_sampled_80['Label'] == 'LDAP']
-data_portmap = df_sampled_80[df_sampled_80['Label'] == 'Portmap']
-data_tftp = df_sampled_80[df_sampled_80['Label'] == 'TFTP']
-data_ssdp = df_sampled_80[df_sampled_80['Label'] == 'SSDP']
-data_snmp = df_sampled_80[df_sampled_80['Label'] == 'SNMP']
-data_udp = df_sampled_80[df_sampled_80['Label'] == 'UDP']
-data_webddos = df_sampled_80[df_sampled_80['Label'] == 'WebDDoS']
+# # plot the distribution of the features for each attack type
+# # 'MSSQL', 'UDPLag', 'NetBIOS', 'NTP', 'Syn', 'DNS', 'LDAP', 'Portmap', 'TFTP', 'SSDP', 'SNMP', 'UDP', 'WebDDoS'
+# data_begin = df_sampled_80[df_sampled_80['Label'] == 'Benign']
+# data_mssql = df_sampled_80[df_sampled_80['Label'] == 'MSSQL']
+# data_udplag = df_sampled_80[df_sampled_80['Label'] == 'UDPLag']
+# data_netbios = df_sampled_80[df_sampled_80['Label'] == 'NetBIOS']
+# data_ntp = df_sampled_80[df_sampled_80['Label'] == 'NTP']
+# data_syn = df_sampled_80[df_sampled_80['Label'] == 'Syn']
+# data_dns = df_sampled_80[df_sampled_80['Label'] == 'DNS']
+# data_ldap = df_sampled_80[df_sampled_80['Label'] == 'LDAP']
+# data_portmap = df_sampled_80[df_sampled_80['Label'] == 'Portmap']
+# data_tftp = df_sampled_80[df_sampled_80['Label'] == 'TFTP']
+# data_ssdp = df_sampled_80[df_sampled_80['Label'] == 'SSDP']
+# data_snmp = df_sampled_80[df_sampled_80['Label'] == 'SNMP']
+# data_udp = df_sampled_80[df_sampled_80['Label'] == 'UDP']
+# data_webddos = df_sampled_80[df_sampled_80['Label'] == 'WebDDoS']
 
 
-fig, ax = plt.subplots(3, 2, figsize=(15, 6))
-features = ['Down/Up Ratio', 'URG Flag Count', 'Bwd Packet Length Min', 'CWE Flag Count',
-            'Avg Fwd Segment Size','Bwd Packet Length Mean']
+# fig, ax = plt.subplots(3, 2, figsize=(15, 6))
+# features = ['Down/Up Ratio', 'URG Flag Count', 'Bwd Packet Length Min', 'CWE Flag Count',
+#             'Avg Fwd Segment Size','Bwd Packet Length Mean']
 
-for i in range(6):
-    ax[i//2, i%2].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: '{:.4f}'.format(x)))
-    sns.kdeplot(data_mssql[features[i]], ax=ax[i//2, i%2], label='MSSQL')
-    sns.kdeplot(data_udplag[features[i]], ax=ax[i//2, i%2], label='UDPLag')
-    sns.kdeplot(data_netbios[features[i]], ax=ax[i//2, i%2], label='NetBIOS')
-    sns.kdeplot(data_ntp[features[i]], ax=ax[i//2, i%2], label='NTP')
-    sns.kdeplot(data_syn[features[i]], ax=ax[i//2, i%2], label='Syn')
-    sns.kdeplot(data_dns[features[i]], ax=ax[i//2, i%2], label='DNS')
-    sns.kdeplot(data_ldap[features[i]], ax=ax[i//2, i%2], label='LDAP')
-    sns.kdeplot(data_portmap[features[i]], ax=ax[i//2, i%2], label='Portmap')
-    sns.kdeplot(data_tftp[features[i]], ax=ax[i//2, i%2], label='TFTP')
-    sns.kdeplot(data_ssdp[features[i]], ax=ax[i//2, i%2], label='SSDP')
-    sns.kdeplot(data_snmp[features[i]], ax=ax[i//2, i%2], label='SNMP')
-    sns.kdeplot(data_udp[features[i]], ax=ax[i//2, i%2], label='UDP')
-    sns.kdeplot(data_webddos[features[i]], ax=ax[i//2, i%2], label='WebDDoS')
-plt.legend(loc='center left', bbox_to_anchor=(1, 1.0))
-plt.tight_layout()
-plt.subplots_adjust(hspace=0.5)
-plt.show()
+# for i in range(6):
+#     ax[i//2, i%2].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: '{:.4f}'.format(x)))
+#     sns.kdeplot(data_mssql[features[i]], ax=ax[i//2, i%2], label='MSSQL')
+#     sns.kdeplot(data_udplag[features[i]], ax=ax[i//2, i%2], label='UDPLag')
+#     sns.kdeplot(data_netbios[features[i]], ax=ax[i//2, i%2], label='NetBIOS')
+#     sns.kdeplot(data_ntp[features[i]], ax=ax[i//2, i%2], label='NTP')
+#     sns.kdeplot(data_syn[features[i]], ax=ax[i//2, i%2], label='Syn')
+#     sns.kdeplot(data_dns[features[i]], ax=ax[i//2, i%2], label='DNS')
+#     sns.kdeplot(data_ldap[features[i]], ax=ax[i//2, i%2], label='LDAP')
+#     sns.kdeplot(data_portmap[features[i]], ax=ax[i//2, i%2], label='Portmap')
+#     sns.kdeplot(data_tftp[features[i]], ax=ax[i//2, i%2], label='TFTP')
+#     sns.kdeplot(data_ssdp[features[i]], ax=ax[i//2, i%2], label='SSDP')
+#     sns.kdeplot(data_snmp[features[i]], ax=ax[i//2, i%2], label='SNMP')
+#     sns.kdeplot(data_udp[features[i]], ax=ax[i//2, i%2], label='UDP')
+#     sns.kdeplot(data_webddos[features[i]], ax=ax[i//2, i%2], label='WebDDoS')
+# plt.legend(loc='center left', bbox_to_anchor=(1, 1.0))
+# plt.tight_layout()
+# plt.subplots_adjust(hspace=0.5)
+# plt.show()
 
 
 # create the clients data
@@ -201,47 +241,50 @@ client_test = dict()
 
 # define the label to be the zero day attack
 which_label = 'WebDDoS'
-how_many = len(df_sampled_80[df_sampled_80['Label'] == which_label])
+how_many = 1350
 
 df_sampled, zero_day, all_attack_labels = zero_day_simulation(df_sampled_80, which_label)
 
-# random sampling 100 benign samples as the test set
-benign_test = df_sampled[df_sampled['Label'] == 'Benign'].sample(100, replace=False, random_state=42)
-df_sampled = df_sampled.drop(benign_test.index)
 
-# random sampling 100 attack samples as the test set
-if how_many > 100:
-    attack_test = zero_day.sample(100, replace=False, random_state=42)
-else:
-    attack_test = zero_day
-
-testset = pd.concat([benign_test, attack_test], axis=0)
-testset = testset.reset_index(drop=True)
-testset['Label'] = binarize_y(testset['Label'], [which_label])
-
-
-# creat train and test set for each client
 i = -1
 for label in tqdm(all_attack_labels, desc='Creating clients'):
-    
     i += 1
-
     if i != len(all_attack_labels):
+        if i == 11:
+            malicious_sampled_train = df_sampled[df_sampled['Label'] == label]
+        else:
+            malicious_sampled_train = df_sampled[df_sampled['Label'] == label].sample(7650, replace=False, random_state=seed)
 
-        malicious_sampled_train = df_sampled[df_sampled['Label'] == label]
         df_sampled = df_sampled.drop(malicious_sampled_train.index)
 
-        benign_sampled = df_sampled[df_sampled['Label'] == 'Benign'].sample(1027, replace=False, random_state=42)    # len(df_sampled['Label'] == 'Benign') / clients_num = 1027
+        benign_sampled = df_sampled[df_sampled['Label'] == 'Benign'].sample(9000, replace=False, random_state=seed)
         df_sampled = df_sampled.drop(benign_sampled.index)
 
-        client_train[i] = pd.concat([malicious_sampled_train, benign_sampled], axis=0)
+        # random split benign data
+        benign_train, benign_test = train_test_split(benign_sampled, test_size=0.15, random_state=seed)
+
+        client_train[i] = pd.concat([malicious_sampled_train, benign_train], axis=0)
         client_train[i] = client_train[i].reset_index(drop=True)
 
         # set the label to binary
         client_train[i]['Label'] = binarize_y(client_train[i]['Label'], [label])
 
         # for test set
-        client_test[i] = testset.copy()
+        zero_day_sampled = zero_day.sample(how_many, random_state=seed, replace=False)
+        zero_day = zero_day.drop(zero_day_sampled.index)
+
+        X_test = zero_day_sampled.drop(columns=['Label']).values
+        y_test = zero_day_sampled['Label'].values
+
+        zd_label = np.unique(zero_day_sampled['Label']).tolist()
+        y_test = np.where(y_test == zd_label, 1, 0)
+
+        zd_df = pd.DataFrame(X_test, columns=zero_day_sampled.drop(columns=['Label']).columns)
+        zd_df['Label'] = y_test
+        benign_test['Label'] = np.where(benign_test['Label'] == 'Benign', 0, 1)
+
+        client_test[i] = pd.concat([zd_df, benign_test], axis=0)
+        client_test[i] = client_test[i].reset_index(drop=True)
 
         # scale the data
         scaler = StandardScaler()
@@ -254,14 +297,12 @@ for label in tqdm(all_attack_labels, desc='Creating clients'):
 
         print('Finished label {}'.format(label))
 
+        data_path = f"mydata/CICDDoS2019/zero_day_{which_label}/client_{i}/"
+        if not os.path.exists(data_path):
+            os.makedirs(data_path)
+        torch.save(client_train[i], os.path.join(data_path, "train_data.pt"))
+        torch.save(client_test[i], os.path.join(data_path, "test_data.pt"))
+
     else:
         break
-
-
-# save the client_train data
-with open('../FLAME/data/client_trains_{}.pkl'.format(which_label), 'wb') as f:
-    pickle.dump(client_train, f)
-
-# save the client_test data
-with open('../FLAME/data/client_test_{}.pkl'.format(which_label), 'wb') as f:
-    pickle.dump(client_test, f)
+        
