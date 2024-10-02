@@ -224,7 +224,7 @@ class Dis(fl.server.strategy.FedAvg):
             for layer_updates in zip(*weighted_weights)
         ]
 
-        # replace last layers
+        # replace last feature layers
         weights_prime[-4] = w_last_layer_new # for last feature layer's weight
         weights_prime[-3] = b_last_layer_new # for last feature layer's bias
 
