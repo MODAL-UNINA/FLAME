@@ -1,4 +1,3 @@
-#%%
 import numpy as np
 from collections import OrderedDict
 from typing import Dict, List, Tuple
@@ -25,7 +24,7 @@ np.random.seed(seed)
 torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
-#%%
+
 class Net(nn.Module):
   def __init__(self) -> None:
     super(Net, self).__init__()
@@ -112,9 +111,8 @@ def test(
   return test_loss, accuracy, f1
 
 
-# 加载本地文件夹中的数据
 def load_data(zero_day, client_id, batch_size):
-    data_path = f"/home/modal-workbench/Projects/Pian/mydata/CICDDoS2019/zero_day_{zero_day}/client_{client_id}/"
+    data_path = f"../mydata/CICDDoS2019/zero_day_{zero_day}/client_{client_id}/"
     train_data = torch.load(os.path.join(data_path, "train_data.pt"))
     test_data = torch.load(os.path.join(data_path, "test_data.pt"))
 
@@ -125,7 +123,6 @@ def load_data(zero_day, client_id, batch_size):
     
     return train_loader, test_loader, num_examples
 
-#TO DO: class_weights implement
 
 def memory_usage(process=None, device=0):
     if process is None:
@@ -163,42 +160,36 @@ def get_gpu_power_consume(device=0):
 def plot_loss_and_accuracy_history(loss_history, accuracy_history):
     fig, ax = plt.subplots(1, 2, figsize=(15, 5))
 
-    # 绘制 Loss 子图
     ax[0].plot(range(1, len(loss_history) + 1), loss_history, color='blue')
     ax[0].set_xlabel("Round")
     ax[0].set_ylabel("Loss")
     ax[0].set_title(f"Training Loss for Client {client_id}")
 
-    # 绘制 Accuracy 子图
     ax[1].plot(range(1, len(accuracy_history) + 1), accuracy_history, color='green')
     ax[1].set_xlabel("Round")
     ax[1].set_ylabel("Accuracy")
     ax[1].set_title(f"Test Accuracy for Client {client_id}")
 
-    # 调整布局并显示图形
     plt.tight_layout()
     plt.show()
 
 def plot_loss_and_f1_history(loss_history, accuracy_history):
     fig, ax = plt.subplots(1, 2, figsize=(15, 5))
 
-    # 绘制 Loss 子图
     ax[0].plot(range(1, len(loss_history) + 1), loss_history, color='blue')
     ax[0].set_xlabel("Round")
     ax[0].set_ylabel("Loss")
     ax[0].set_title(f"Test Loss for Client {client_id}")
 
-    # 绘制 Accuracy 子图
     ax[1].plot(range(1, len(accuracy_history) + 1), accuracy_history, color='green')
     ax[1].set_xlabel("Round")
     ax[1].set_ylabel("Accuracy")
     ax[1].set_title(f"Test F1 for Client {client_id}")
 
-    # 调整布局并显示图形
     plt.tight_layout()
     plt.show()
 
-#%%
+
 # Define Flower client
 class FlowerClient(fl.client.NumPyClient):
 
@@ -252,7 +243,6 @@ class FlowerClient(fl.client.NumPyClient):
       return float(loss), self.num_examples["testset"], {"accuracy": float(accuracy)}
 
 
-#%%
 # Defining the profiler
 num_clients = 12
 time_list = []
@@ -267,8 +257,8 @@ server_IP = '127.0.0.1:8080'
 output_file = 'output_fedavg'
 # 'MSSQL', 'UDPLag', 'NetBIOS', 'NTP', 'Syn',
 # 'DNS', 'LDAP', 'Portmap', 'TFTP', 'SSDP', 'SNMP', 'UDP', 'WebDDoS'
-zero_day = 'WebDDoS'
-client_id = 11
+zero_day = 'MSSQL'
+client_id = 11    # set index for different client
 
 _parser = argparse.ArgumentParser(prog="client", description="Run the client.",)
 _parser.add_argument('--client_id', type=int, default=client_id)
@@ -287,7 +277,6 @@ print("Device:", DEVICE)
 pid_client = os.getpid()
 process = psutil.Process(os.getpid())
 print(process.pid, pid_client)
-#%%
 t1 =  time.perf_counter()
 
 model = Net()
@@ -304,7 +293,7 @@ plot_loss_and_accuracy_history(train_loss_history, test_accuracy_history)
 
 plot_loss_and_f1_history(test_loss_history, test_f1_history)
 
-#%%
+
 with torch.cuda.device(CVD):
     flops, macs, params = get_model_profile(model=model, # model
                                     input_shape=(batch_size, 28, 1), # input shape to the model. If specified, the model takes a tensor with this shape as the only positional argument.
@@ -334,7 +323,6 @@ with torch.cuda.device(CVD):
     and MACs are often a better representation of the computational complexity of the model than FLOPs.
     '''
 
-# %%
 # convert to float
 flops = float(flops[:-2])
 macs = float(macs[:-5])
@@ -373,8 +361,6 @@ with open(f'{output_file}/Results_{zero_day}/Client{client_id}_performance.txt',
     f.write(f'Number of examples: {num_examples}\n')
     f.write(f'THROUGHPUT: {flops/execution_time} FLOPS\n')
     f.write(f'ENERGY EFFICIENCY: {flops/execution_time/power_draw} FLOPS/W\n')
-#%%
-#%%
 
 # save loss and accuracy
 D = {}
