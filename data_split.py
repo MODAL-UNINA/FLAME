@@ -240,12 +240,15 @@ client_val = dict()
 client_test = dict()
 
 # define the label to be the zero day attack
-which_label = 'WebDDoS'
+# 'MSSQL', 'UDPLag', 'NetBIOS', 'NTP',, 'Syn',
+# 'DNS', 'LDAP', 'Portmap', 'TFTP', 'SSDP', 'SNMP', 'UDP', 'WebDDoS'
+
+which_label = 'MSSQL'
 how_many = 1350
 
 df_sampled, zero_day, all_attack_labels = zero_day_simulation(df_sampled_80, which_label)
 
-
+# split data for each client
 i = -1
 for label in tqdm(all_attack_labels, desc='Creating clients'):
     i += 1
