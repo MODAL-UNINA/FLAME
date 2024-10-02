@@ -1,4 +1,3 @@
-#%%
 import numpy as np
 import flwr as fl
 from typing import List, Tuple
@@ -8,7 +7,6 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-
 import random
 
 seed = 0
@@ -18,7 +16,7 @@ torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
 
-#%%
+
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     # Multiply accuracy of each client by number of examples used
     accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
@@ -44,7 +42,6 @@ class Net(nn.Module):
     x = F.sigmoid(self.fc1(x))
     return x
   
-#%%
 # Start Server
 num_clients = 12
 n_round = 100
@@ -70,7 +67,6 @@ history =  fl.server.start_server(
                     initial_parameters=parameters,
                     evaluate_metrics_aggregation_fn=weighted_average))
 
-# %%
 # plot
 def plot_loss_accuracy_server(history):
     plt.figure(figsize=(15, 5))
