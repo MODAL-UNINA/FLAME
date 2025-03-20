@@ -191,49 +191,6 @@ df_best_80 = df_best_80.reset_index(drop=True)
 df_sampled_80 = df_best_80.copy()
 
 
-# # plot the distribution of the features for each attack type
-# # 'MSSQL', 'UDPLag', 'NetBIOS', 'NTP', 'Syn', 'DNS', 'LDAP', 'Portmap', 'TFTP', 'SSDP', 'SNMP', 'UDP', 'WebDDoS'
-# data_begin = df_sampled_80[df_sampled_80['Label'] == 'Benign']
-# data_mssql = df_sampled_80[df_sampled_80['Label'] == 'MSSQL']
-# data_udplag = df_sampled_80[df_sampled_80['Label'] == 'UDPLag']
-# data_netbios = df_sampled_80[df_sampled_80['Label'] == 'NetBIOS']
-# data_ntp = df_sampled_80[df_sampled_80['Label'] == 'NTP']
-# data_syn = df_sampled_80[df_sampled_80['Label'] == 'Syn']
-# data_dns = df_sampled_80[df_sampled_80['Label'] == 'DNS']
-# data_ldap = df_sampled_80[df_sampled_80['Label'] == 'LDAP']
-# data_portmap = df_sampled_80[df_sampled_80['Label'] == 'Portmap']
-# data_tftp = df_sampled_80[df_sampled_80['Label'] == 'TFTP']
-# data_ssdp = df_sampled_80[df_sampled_80['Label'] == 'SSDP']
-# data_snmp = df_sampled_80[df_sampled_80['Label'] == 'SNMP']
-# data_udp = df_sampled_80[df_sampled_80['Label'] == 'UDP']
-# data_webddos = df_sampled_80[df_sampled_80['Label'] == 'WebDDoS']
-
-
-# fig, ax = plt.subplots(3, 2, figsize=(15, 6))
-# features = ['Down/Up Ratio', 'URG Flag Count', 'Bwd Packet Length Min', 'CWE Flag Count',
-#             'Avg Fwd Segment Size','Bwd Packet Length Mean']
-
-# for i in range(6):
-#     ax[i//2, i%2].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: '{:.4f}'.format(x)))
-#     sns.kdeplot(data_mssql[features[i]], ax=ax[i//2, i%2], label='MSSQL')
-#     sns.kdeplot(data_udplag[features[i]], ax=ax[i//2, i%2], label='UDPLag')
-#     sns.kdeplot(data_netbios[features[i]], ax=ax[i//2, i%2], label='NetBIOS')
-#     sns.kdeplot(data_ntp[features[i]], ax=ax[i//2, i%2], label='NTP')
-#     sns.kdeplot(data_syn[features[i]], ax=ax[i//2, i%2], label='Syn')
-#     sns.kdeplot(data_dns[features[i]], ax=ax[i//2, i%2], label='DNS')
-#     sns.kdeplot(data_ldap[features[i]], ax=ax[i//2, i%2], label='LDAP')
-#     sns.kdeplot(data_portmap[features[i]], ax=ax[i//2, i%2], label='Portmap')
-#     sns.kdeplot(data_tftp[features[i]], ax=ax[i//2, i%2], label='TFTP')
-#     sns.kdeplot(data_ssdp[features[i]], ax=ax[i//2, i%2], label='SSDP')
-#     sns.kdeplot(data_snmp[features[i]], ax=ax[i//2, i%2], label='SNMP')
-#     sns.kdeplot(data_udp[features[i]], ax=ax[i//2, i%2], label='UDP')
-#     sns.kdeplot(data_webddos[features[i]], ax=ax[i//2, i%2], label='WebDDoS')
-# plt.legend(loc='center left', bbox_to_anchor=(1, 1.0))
-# plt.tight_layout()
-# plt.subplots_adjust(hspace=0.5)
-# plt.show()
-
-
 # create the clients data
 client_train = dict()
 client_val = dict()
@@ -243,7 +200,7 @@ client_test = dict()
 # 'MSSQL', 'UDPLag', 'NetBIOS', 'NTP',, 'Syn',
 # 'DNS', 'LDAP', 'Portmap', 'TFTP', 'SSDP', 'SNMP', 'UDP', 'WebDDoS'
 
-which_label = 'MSSQL'
+which_label = 'NTP'
 how_many = 1350
 
 df_sampled, zero_day, all_attack_labels = zero_day_simulation(df_sampled_80, which_label)
@@ -300,7 +257,7 @@ for label in tqdm(all_attack_labels, desc='Creating clients'):
 
         print('Finished label {}'.format(label))
 
-        data_path = f"mydata/CICDDoS2019/zero_day_{which_label}/client_{i}/"
+        data_path = f"../mydata/CICDDoS2019/zero_day_{which_label}/client_{i}/"
         if not os.path.exists(data_path):
             os.makedirs(data_path)
         torch.save(client_train[i], os.path.join(data_path, "train_data.pt"))
