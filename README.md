@@ -10,4 +10,6 @@ This limitation hinders the applicability of FL, especially in scenarios involvi
   
 - G.A.N.D.A.L.F. - Gan Approaches for Non-iiD Aiding Learning in Federations, CUP: E53D23008290006, PNRR - Missione 4 “Istruzione e Ricerca” - Componente C2 Investimento 1.1 “Fondo per il Programma Nazionale di Ricerca e Progetti di Rilevante Interesse Nazionale (PRIN)”.
 
-Note: Place the CICDDoS2019 data set in the folder '../FLAME/data_raw'.
+
+### Note
+Place the CICDDoS2019 data set in the folder '../FLAME/data_raw'.
